@@ -8,6 +8,7 @@ import feedparser
 intents = discord.Intents.default()
 intents.message_content = True  # !테스트 명령어용
 intents.members = True          # 입장/퇴장 이벤트 감지용
+intents.reactions = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -235,6 +236,68 @@ async def on_ready():
     print(f'로그인 성공: {bot.user}')
     await start_web_server()  # 웹 서버 구동 추가
     check_all_alerts.start()
+
+# ==================== 반응 역할(이모지 역할) 시스템 ====================
+
+# 이모지와 역할 ID를 매칭합니다 (유튜브, 치지직, 트위터)
+ROLE_EMOJIS = {
+    "🔴": YOUTUBE_ROLE_ID,  # 빨간색 동그라미 누르면 유튜브 역할
+    "🟢": CHZZK_ROLE_ID,    # 초록색 동그라미 누르면 치지직 역할
+    "🐦": TWITTER_ROLE_ID   # 파란새/트위터 이모지 누르면 트위터 역할
+}
+
+@bot.command(name="역할메시지")
+@commands.has_permissions(administrator=True)
+async def setup_reaction_roles(ctx):
+    embed = discord.Embed(
+        title="🔔 알림 역할 셀프 자판기",
+        description=(
+            "원하는 플랫폼의 이모지를 누르시면 알림 역할을 받으실 수 있습니다!\n\n"
+            "🔴 **YouTube 알림 역할**\n"
+            "🟢 **Chzzk 알림 역할**\n"
+            "🐦 **Twitter (X) 알림 역할**\n\n"
+            "(이모지를 다시 누르면 역할이 해제됩니다!)"
+        ),
+        color=0xFFB6C1
+    )
+    embed.set_footer(text="코가네 랑 팬 커뮤니티")
+    
+    msg = await ctx.send(embed=embed)
+    
+    # 사용할 이모지들을 메시지에 자동으로 반응(Reaction)으로 달아줍니다
+    for emoji in ROLE_EMOJIS.keys():
+        await msg.add_reaction(emoji)
+        
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+# 사용자가 이모지를 추가(클릭)했을 때 역할 부여
+@bot.event
+async def on_raw_reaction_add(payload):
+    # 봇이 누른 건 무시
+    if payload.member.bot:
+        return
+        
+    role_id = ROLE_EMOJIS.get(payload.emoji.name)
+    if role_id:
+        guild = bot.get_guild(payload.guild_id)
+        role = guild.get_role(role_id)
+        if role:
+            await payload.member.add_roles(role)
+
+# 사용자가 이모지를 취소(제거)했을 때 역할 회수
+@bot.event
+async def on_raw_reaction_remove(payload):
+    role_id = ROLE_EMOJIS.get(payload.emoji.name)
+    if role_id:
+        guild = bot.get_guild(payload.guild_id)
+        role = guild.get_role(role_id)
+        if role:
+            member = guild.get_member(payload.user_id)
+            if member and not member.bot:
+                await member.remove_roles(role)
 
 # 맨 밑줄을 이렇게 변경 (토큰을 코드에 직접 적지 않고 환경 변수에서 가져옴)
 bot.run(os.environ.get('DISCORD_TOKEN'))
