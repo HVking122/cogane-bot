@@ -17,6 +17,7 @@ YOUTUBE_DISCORD_CHANNEL_ID = 1559208476289404990  # 유튜브 알림용 채널 I
 CHZZK_DISCORD_CHANNEL_ID = 1559208487680999505    # 치지직 알림용 채널 ID
 TWITTER_DISCORD_CHANNEL_ID = 1559208558296436857  # 트위터 알림용 채널 ID
 WELCOME_DISCORD_CHANNEL_ID = 1559223499426365511   # 입장/퇴장 알림 채널 ID
+AUTO_ROLE_ID = 1559210002458091743
 
 # ==================== [수정] 플랫폼별 알림 역할 ID 각각 입력 ====================
 YOUTUBE_ROLE_ID = 1559225819388448889  # 유튜브알림 역할 ID
@@ -55,6 +56,12 @@ async def on_member_remove(member):
     if channel:
         msg = f"👋 {member.display_name} 님이 서버를 떠나셨습니다."
         await channel.send(msg)
+
+@bot.event
+async def on_member_join(member):
+    role = member.guild.get_role(AUTO_ROLE_ID)
+    if role:
+        await member.add_roles(role)
 
 # ==================== [수정] 플랫폼별 맞춤 핑 테스트 명령어 ====================
 @bot.command(name="테스트")
